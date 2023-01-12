@@ -1,0 +1,93 @@
+﻿--количество исполнителей в каждом жанре
+SELECT g.genre_name, count(ge.executor_id) 
+  FROM genre g
+       JOIN genre_executor ge 
+       ON g.genre_id = ge.genre_id
+ GROUP BY g.genre_name;
+   
+--количество треков, вошедших в альбомы 2019-2020 годов  
+SELECT a.album_name, a.year_of_release, count(t.track_id) 
+  FROM album a
+       JOIN track t 
+       ON a.album_id = t.album_id
+ WHERE a.year_of_release BETWEEN 2019 and 2020
+ GROUP BY a.album_name, a.year_of_release;
+  
+--средняя продолжительность треков по каждому альбому  
+SELECT a.album_name, AVG(t.duration) 
+  FROM album a
+       JOIN track t 
+       ON a.album_id = t.album_id
+ GROUP BY a.album_name;
+
+--все исполнители, которые не выпустили альбомы в 2020 году
+SELECT e.executor_name 
+  FROM executor e
+       JOIN executor_album ea 
+       ON e.executor_id = ea.executor_id
+       JOIN album a 
+       ON a.album_id = ea.album_id
+ WHERE a.year_of_release < 2020; 
+  
+--названия сборников, в которых присутствует конкретный исполнитель (выберите сами)
+SELECT c.collection_name 
+  FROM collection c
+       JOIN track_collection tc 
+       ON c.collection_id = tc.collection_id
+       JOIN track t 
+       ON t.track_id = tc.track_id
+       JOIN album a 
+       ON a.album_id = t.album_id
+       JOIN executor_album ea 
+       ON a.album_id = ea.album_id
+       JOIN executor e 
+       ON e.executor_id = ea.executor_id
+ WHERE e.executor_name LIKE '%%Баста%%';
+  
+--название альбомов, в которых присутствуют исполнители более 1 жанра
+SELECT a.album_name 
+  FROM album a
+       JOIN executor_album ea 
+       ON a.album_id = ea.album_id
+       JOIN executor e 
+       ON e.executor_id = ea.executor_id
+       JOIN genre_executor ge 
+       ON ge.executor_id = e.executor_id
+       JOIN genre g 
+       ON g.genre_id = ge.genre_id
+ GROUP BY e.executor_name, a.album_name
+HAVING count(ge.genre_id) > 1;
+   
+--наименование треков, которые не входят в сборники
+SELECT t.track_name 
+  FROM track t
+       LEFT JOIN  track_collection tc 
+       ON t.track_id = tc.track_id
+ WHERE tc.track_id IS null;
+	
+--исполнителя(-ей), написавшего самый короткий по продолжительности 
+--трек (теоретически таких треков может быть несколько)
+SELECT e.executor_name 
+  FROM executor e
+       JOIN executor_album ea 
+       ON e.executor_id = ea.executor_id
+       JOIN album a 
+       ON a.album_id = ea.album_id
+       JOIN track t 
+       ON t.album_id = a.album_id
+ WHERE duration = (SELECT MIN(duration) 
+                     FROM track);
+
+--название альбомов, содержащих наименьшее количество треков
+SELECT a.album_name , count(t.track_id) 
+  FROM album a
+       JOIN track t ON a.album_id = t.album_id
+ GROUP BY a.album_name 
+HAVING count(t.track_id) in (
+       SELECT count(t.track_id) 
+         FROM album a
+    	      JOIN track t 
+              ON a.album_id = t.album_id
+        GROUP BY a.album_name
+        ORDER BY count(t.track_id)
+        LIMIT 1);
